@@ -4,6 +4,7 @@ import glob
 
 from config import logger
 
+
 def check_folder_name(path: str) -> None:
     """
     To get the name of every student's folder,
@@ -13,7 +14,7 @@ def check_folder_name(path: str) -> None:
     folder_list = glob.glob(folder_path)
 
     # To set regex rule
-    student_id_regex = re.compile(r'\d{10}')
+    student_id_regex = re.compile(r"\d{10}")
     for folder in folder_list:
         folder_name = folder.split("\\")[-1]
         try:
@@ -25,9 +26,10 @@ def check_folder_name(path: str) -> None:
             logger.error(f"{student_id} format wrong, error message : {err}")
 
         # To check the files name which in folder
-        check_file_name(folder) 
+        check_file_name(folder)
 
-def check_file_name(path: str)-> None:
+
+def check_file_name(path: str) -> None:
     """
     Check P is upper and file type is .c
     if file type is .cpp, change it to .c,
@@ -54,12 +56,12 @@ def check_file_name(path: str)-> None:
         else:
             os.remove(file)
             continue
-        
+
         # Check P is upper
         if file_name.find("p") != -1:
-            new_file_name = file_name.replace('p', 'P')
+            new_file_name = file_name.replace("p", "P")
             os.rename(f"{path}/{file_name}", f"{path}/{new_file_name}")
-        
+
         # Check .c instead .c.c
         if file_name.find(".c.c") != -1:
             new_file_name = f"{file_name}.c"
@@ -70,7 +72,7 @@ def check_file_name(path: str)-> None:
             os.remove(file)
             logger.error(f"{file_name} format wrong!")
 
+
 def check_all() -> None:
     """check all"""
     check_folder_name("code")
-    
