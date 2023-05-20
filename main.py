@@ -14,7 +14,7 @@ from tqdm import tqdm
 def compile(file_path: Path) -> str:
     """compile target program"""
 
-    compile_command = ["gcc", "-o", "program", str(file_path)]
+    compile_command = ["gcc", "-o", "program", str(file_path), "-lm"]
     compile_result = subprocess.Popen(
         compile_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -56,46 +56,59 @@ def sandbox(file_path: Path, problem_path: Path) -> int:
             input_data = f_in.read()
             except_output = f_out.read()
 
-        execution_process = subprocess.Popen(
-            execution_command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        # init process
+        execution_process = None
 
-        execution_process.stdin.write(input_data.encode())
-        execution_process.stdin.close()
+        try:
+            execution_process = subprocess.Popen(
+                execution_command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
-        # Get pid number and monitor status for it
-        start_time = time.time()
-        runpid = execution_process.pid
-        monitor = psutil.Process(runpid)
+            execution_process.stdin.write(input_data.encode())
+            execution_process.stdin.close()
 
-        while execution_process.poll() is None:
-            elapsed_time = time.time() - start_time  # Execution time
-            mem_info = monitor.memory_info()
+            # Get pid number and monitor status for it
+            start_time = time.time()
+            runpid = execution_process.pid
+            monitor = psutil.Process(runpid)
 
-            if elapsed_time > time_limit:
-                logger.error(f"{file_path} run into TLE.")
-                execution_process.kill()
-                return 0
-            elif mem_info.rss > memory_limit:
-                logger.error(f"{file_path} run into RE.")
-                execution_process.kill()
-                return 0
+            while execution_process.poll() is None:
+                elapsed_time = time.time() - start_time  # Execution time
+                mem_info = monitor.memory_info()
 
-            time.sleep(0.1)
+                if elapsed_time > time_limit:
+                    logger.error(f"{file_path} run into TLE.")
+                    execution_process.kill()
+                    return 0
+                elif mem_info.rss > memory_limit:
+                    logger.error(f"{file_path} run into RE.")
+                    execution_process.kill()
+                    return 0
 
-        # wait for process to terminal
-        execution_process.wait()
+                time.sleep(0.1)
 
-        output_byte = execution_process.stdout.read()
-        output = io.StringIO(output_byte.decode()).read()
+            # wait for process to terminal
+            execution_process.wait()
 
-        if output.strip() == except_output.strip():
-            this_problem_score += 2
-        else:
-            this_problem_score += 0
+            output_byte = execution_process.stdout.read()
+            output = io.StringIO(output_byte.decode()).read()
+
+            if output.strip() == except_output.strip():
+                this_problem_score += 2
+            else:
+                this_problem_score += 0
+        finally:
+            # close the process explicitly
+            if execution_process:
+                execution_process.stdout.close()
+                execution_process.stderr.close()
+                # if process still running, close it
+                if execution_process.poll() is None:
+                    execution_process.kill()
+                execution_process.wait()
 
     return this_problem_score
 
