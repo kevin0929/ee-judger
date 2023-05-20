@@ -14,7 +14,7 @@ from tqdm import tqdm
 def compile(file_path: Path) -> str:
     """compile target program"""
 
-    compile_command = ["gcc", "-o", "program", str(file_path), "-lm"]
+    compile_command = ["gcc", "-o", "program", str(file_path), "-lm", "-w"]
     compile_result = subprocess.Popen(
         compile_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -159,11 +159,11 @@ if __name__ == "__main__":
     check_all()
     score_df = pd.DataFrame(
         columns=["P1", "P2", "P3", "P4", "P5", "P6"],
-        index=["student_id"],
+        index=[],
     )
     student_list = Path("code").glob("*")
 
-    for student in student_list:
+    for student in tqdm(student_list):
         student_id = student.name
         student_dict = get_all_score(student, 6)
         new_df = pd.DataFrame(
@@ -177,6 +177,5 @@ if __name__ == "__main__":
             },
             index=[student_id],
         )
-        print(new_df)
         score_df = pd.concat([score_df, new_df], axis=0)
-    score_df.to_csv("final_score.csv")
+    score_df.to_csv("final_score.csv", index=True)
