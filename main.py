@@ -1,18 +1,17 @@
-import glob
-import os
 import re
 import io
 import time
 import psutil
 import subprocess
 import pandas as pd
+from pathlib import Path
 
 from config import logger
 from dependencies import check_all
 from tqdm import tqdm
 
 
-def compile(file_path: str) -> str:
+def compile(file_path: Path) -> str:
     """compile target program"""
 
     compile_command = ["gcc", "-o", "program", str(file_path)]
@@ -31,7 +30,7 @@ def compile(file_path: str) -> str:
         return err_msg
 
 
-def sandbox(file_path: str, problem_path: str) -> int:
+def sandbox(file_path: Path, problem_path: Path) -> int:
     """
     execute program avoid running into
     runtime and memory error
@@ -44,8 +43,8 @@ def sandbox(file_path: str, problem_path: str) -> int:
     this_problem_score = 0
 
     # Fetch the test data
-    input_list = glob.glob(os.path.join(f"{problem_path}/input", "*"))
-    output_list = glob.glob(os.path.join(f"{problem_path}/output", "*"))
+    input_list = sorted(list(Path(f"{problem_path}/input").glob("*")))
+    output_list = sorted(list(Path(f"{problem_path}/output").glob("*")))
 
     # Start judge
     size = len(input_list)
@@ -92,7 +91,6 @@ def sandbox(file_path: str, problem_path: str) -> int:
 
         output_byte = execution_process.stdout.read()
         output = io.StringIO(output_byte.decode()).read()
-        # print(output)
 
         if output.strip() == except_output.strip():
             this_problem_score += 2
@@ -102,13 +100,13 @@ def sandbox(file_path: str, problem_path: str) -> int:
     return this_problem_score
 
 
-def execution(file_path: str, problem_number: int) -> int:
+def execution(file_path: Path, problem_number: int) -> int:
     """return target problem score"""
 
     # First step : Compile
     compile_msg = compile(file_path)
     if compile_msg != "pass":
-        file_name = file_path.split("\\")[-1]
+        file_name = file_path.name
         logger.error(
             f"The {file_name} can't compile problem {problem_number}, error msg : {compile_msg}"
         )
@@ -122,15 +120,15 @@ def execution(file_path: str, problem_number: int) -> int:
     return this_problem_score
 
 
-def get_all_score(folder_path: str, problem_total_number: int) -> dict:
+def get_all_score(folder_path: Path, problem_total_number: int) -> dict:
     """traverse all problem for one student"""
 
     score_dict = {idx: 0 for idx in range(1, problem_total_number + 1)}
-    file_list = glob.glob(os.path.join(folder_path, "*"))
+    file_list = folder_path.glob("*")
 
     for file in file_list:
         # Fetch problem number
-        file_name = file.split("\\")[-1]
+        file_name = file.name
         match = re.search(r"P(\d+)\.c", file_name)
         problem_number = match.group(1)
 
@@ -150,10 +148,10 @@ if __name__ == "__main__":
         columns=["P1", "P2", "P3", "P4", "P5", "P6"],
         index=["student_id"],
     )
-    student_list = glob.glob(os.path.join("code", "*"))
+    student_list = Path("code").glob("*")
 
     for student in student_list:
-        student_id = student.split("\\")[-1]
+        student_id = student.name
         student_dict = get_all_score(student, 6)
         new_df = pd.DataFrame(
             {
